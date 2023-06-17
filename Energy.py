@@ -24,7 +24,7 @@ class Energy:
             for line in kFile:
                 line = line.strip()
                 insertArr = line.split(',')
-                insertArr[0] = int(insertArr[0])
+                insertArr[1] = int(insertArr[1])
                 self.posTuples.append(insertArr)
         self.outputFilename = outputFilename
         self.reduxName = reduxName
@@ -72,10 +72,10 @@ class Energy:
         return -1
 
     ##takes a list of mutations, gets modified sequence and gets the energy of that particular sequence+set of mutations
-    def getEnergy(self, mutationList):
+    def getEnergy(self, seq, mutationList):
         ctr = 0
         energy = 0
-        inputList = self.initMutations(mutationList)
+        inputList = self.initMutated(seq, mutationList)
         length = len(inputList)
 
         for i in range(0,length):
@@ -123,14 +123,136 @@ class Energy:
         return returnSeq
 
 
-    ## takes list of mutations and returns a mutated sequence list NOTE: commented out until I get files from avik
-    def initMutations(self, mutList):
-        newList = list(self.nVals)
+    ## takes list of mutations and returns a mutated sequence list
+    def initMutated(self, inSeq, mutList):
+        newList = list(inSeq)
         for pos in mutList:
-            newList[(pos[0] - 1)] = pos[1]
+            newList[(pos[1])-1] = pos[2]
 
-        ##newList = self.reduce(newList, self.reduxName)
+        newList = self.reduce(newList, self.reduxName)
         return newList    
+    
+    ##takes average deltadeltaE of a particular pair of mutations.
+    ##seqList[][] - array of sequence arrays
+    def mutateAverageOf1(self,seqList):
+        ##for every sequence, 
+        ##if seq[m1] = k1 and seq[m2] = k2
+        sum = 0
+        mutList = self.posTuples
+        m1Idx = mutList[0][1]
+        m2Idx = mutList[1][1]
+        wildTypeEnergy = self.getEnergy(self.nVals, [])
+        
+        ctr = 0
+        for seq in seqList:
+            if seq[m1Idx-1] == mutList[0][2] and seq[m2Idx-1] == mutList[1][2]: ##if the sequence has both mutations
+                ##get energy of seq
+                ##get energy of wildtype
+                ##calculate delta e of seq and wildtype
+                seqEnergy = self.getEnergy(seq, [])
+                deltaE = wildTypeEnergy - seqEnergy
+                sum += deltaE
+                ctr += 1
+
+        if (ctr == 0):
+            print("No sequences found.")
+            return
+        
+        print("Average for ", mutList, " is: ", sum/ctr)
+
+    ##Flips mutations in mutList
+    def reverseMutList(self, mutList):
+        newList = list(mutList)
+        for pos in newList:
+            temp = pos[0]
+            pos[0] = pos[2]
+            pos[2] = temp
+        return newList
+
+
+    def mutateAverageOf2(self,seqList):
+        ## (wildtype - energy(sequence)) - (wildtype - energy(sequence without m2)) - (wildtype-energy(sequence without m1))
+        sum = 0
+        ctr = 0
+        mutList = self.posTuples
+        m1Idx = mutList[0][1]
+        m2Idx = mutList[1][1]
+        print(mutList)
+        print(m1Idx)
+        print(m2Idx)
+        for seq in seqList:
+            print(seq)
+            if seq[m1Idx - 1] == mutList[0][2] and seq[m2Idx - 1] == mutList[1][2]: ##if the sequence has both mutations
+                sum += self.mutateReturnReversed(seq, mutList)
+                ctr += 1
+
+        if (ctr == 0):
+            print("No sequences found.")
+            return
+        return sum/ctr
+    
+    def mutateAverageOf3(self,seqList):
+        ##Search for sequences that can possible mutate to m1m2, calculate deltadeltaE
+        sum = 0
+        ctr = 0
+        mutList = self.posTuples
+        m1Idx = mutList[0][1]
+        m2Idx = mutList[1][1]
+        for seq in seqList:
+            if seq[m1Idx - 1] == mutList[0][0] and seq[m2Idx - 1] == mutList[1][0]: ##if the sequence can have both mutations
+                sum += self.mutateReturn(seq, mutList)
+                ctr += 1
+
+        if (ctr == 0):
+            print("No sequences found.")
+            return
+        return sum/ctr
+
+            
+
+    def mutateReturnReversed(self, sequence, mutationList): ##1 based indexing, pos and mutation
+        reversedList = self.reverseMutList(mutationList)
+        revertm1MutList = [None] *1
+        revertm2MutList = [None] *1
+        
+        revertm1MutList[0] = reversedList[1]
+        revertm2MutList[0] = reversedList[0]
+        revertNoneList = []
+
+        wildTypeEnergy = self.getEnergy(self.nVals, [])
+        m1Energy = self.getEnergy(sequence, revertm2MutList)
+        m2Energy = self.getEnergy(sequence, revertm1MutList)
+        m1m2Energy = self.getEnergy(sequence, revertNoneList)
+
+        m1Delta = wildTypeEnergy - m1Energy
+        m2Delta = wildTypeEnergy - m2Energy
+        m1m2Delta = wildTypeEnergy - m1m2Energy
+
+        deltaDeltaE = m1m2Delta - (m1Delta + m2Delta)
+
+        return deltaDeltaE
+
+    ##calculates deltadeltae and returns 
+    def mutateReturn(self, sequence, mutationList): ##1 based indexing, pos and mutation
+        m1MutList = [None] *1
+        m2MutList = [None] *1
+        m1m2MutList = mutationList
+        m1MutList[0] = mutationList[0]
+        m2MutList[0] = mutationList[1]
+
+        defaultEnergy = self.getEnergy(sequence, [])
+        m1Energy = self.getEnergy(sequence, m1MutList)
+        m2Energy = self.getEnergy(sequence, m2MutList)
+        m1m2Energy = self.getEnergy(sequence, m1m2MutList)
+
+        m1Delta = defaultEnergy - m1Energy
+        m2Delta = defaultEnergy - m2Energy
+        m1m2Delta = defaultEnergy - m1m2Energy
+
+        deltaDeltaE = m1m2Delta - (m1Delta + m2Delta)
+
+        return deltaDeltaE
+
 
     def mutate(self): ##1 based indexing, pos and mutation
         m1MutList = [None] *1
@@ -139,10 +261,10 @@ class Energy:
         m1MutList[0] = self.posTuples[0]
         m2MutList[0] = self.posTuples[1]
 
-        wildTypeEnergy = self.getEnergy([])
-        m1Energy = self.getEnergy(m1MutList)
-        m2Energy = self.getEnergy(m2MutList)
-        m1m2Energy = self.getEnergy(m1m2MutList)
+        wildTypeEnergy = self.getEnergy(self.nVals, [])
+        m1Energy = self.getEnergy(self.nVals, m1MutList)
+        m2Energy = self.getEnergy(self.nVals, m2MutList)
+        m1m2Energy = self.getEnergy(self.nVals, m1m2MutList)
 
         m1Delta = wildTypeEnergy - m1Energy
         m2Delta = wildTypeEnergy - m2Energy
@@ -155,9 +277,9 @@ class Energy:
         sys.stdout = open(self.outputFilename, 'w')
         print("Mutations: ", self.posTuples)
         print("Wildtype Energy: ", wildTypeEnergy)
-        print("m1 Energy: ", wildTypeEnergy)
-        print("m2 Energy: ", wildTypeEnergy)
-        print("m1m2 Energy: ", wildTypeEnergy)
+        print("m1 Energy: ", m1Energy)
+        print("m2 Energy: ", m2Energy)
+        print("m1m2 Energy: ", m1m2Energy)
         print("DeltaE m1m2: ", m1m2Delta)
         print("DeltaE m1: ", m1Delta)
         print("DeltaE m2: ", m2Delta)

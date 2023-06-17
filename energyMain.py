@@ -1,5 +1,24 @@
 import Energy
 
+def printAverage():
+
+    energyOb = Energy.Energy("in.nl43.seq","J.npy","test.txt","in.reduce4.redux","swag.txt")
+    ##nFile = open("in.fullseq", 'r')
+    nFile = open("in.fullseq", 'r')
+
+    inputList = []
+    lines = nFile.readlines()
+    ctr = 0
+
+    ##reads line by line and adds sequence array to inputlist
+    for line in lines:
+        strHolder = line.strip()
+        appendList = list(strHolder)
+        inputList.append([])
+        inputList[ctr] = appendList
+        ctr += 1
+
+    print(energyOb.mutateAverageOf3(inputList))
 
 
 def main():
@@ -27,4 +46,5 @@ def main():
 
 ##First, get inputs and calculate delta-delta e
 
-main()
+##main()
+printAverage()
