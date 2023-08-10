@@ -1,5 +1,8 @@
 import os
+
 class EnergyAverage:
+    formattedMutation1 = ""
+    formattedMutation2 = ""
     totalSeq = []
     consensus = []
     mutation1 = []
@@ -16,11 +19,25 @@ class EnergyAverage:
     def __init__(self,totalSeq, consensus, mutation1, mutation2, jFileArray, reduxName):
         self.foundSeqs = []
         self.totalSeq = totalSeq
-        self.consensus = consensus
+        self.reduxName = reduxName
         self.mutation1 = mutation1
         self.mutation2 = mutation2
         self.jFileArray = jFileArray
-        self.reduxName = reduxName
+        self.consensus = self.reduceSequence(consensus)
+
+
+        self.formattedMutation1 = self.arrToString(mutation1)
+        self.formattedMutation2 = self.arrToString(mutation2)
+        
+
+    def arrToString(self,mutation):
+        altMutations = '/'.join(mutation[2])
+        newString = ''
+        newString = newString + str(mutation[1])
+        newString = newString + str(mutation[0]+1)
+        newString = newString + altMutations
+        return newString
+
 
     ## reduces mutations
     def reduceMutations(self): 
@@ -58,6 +75,8 @@ class EnergyAverage:
                         self.mutation1[2] = 'D'
                     else:
                         return -1
+                    
+                    
                     
                 elif ctr == self.mutation2[0]:
                     line = line.strip()
@@ -117,6 +136,7 @@ class EnergyAverage:
                     elif val in dAlpha:
                         returnSeq.append('D')
                     else:
+                        print("`invalid char`:",val ,flush=True)
                         return -1
                     ctr+=1
         return returnSeq
@@ -131,11 +151,17 @@ class EnergyAverage:
 
         if (len(self.foundSeqs) == 0):
             print("no sequences found...")
-            return -1            
+            return -1      
 
     def reduceFoundSeqs(self):
         for i in range(0, len(self.foundSeqs)):
             self.foundSeqs[i] = self.reduceSequence(self.foundSeqs[i])
+            print(self.foundSeqs[i])
+
+    def reduceTotalSeqs(self):
+        for i in range(0, len(self.totalSeq)):
+            self.totalSeq[i] = self.reduceSequence(self.totalSeq[i])
+            print(self.totalSeq[i])
 
         
     def getCoupling(self, iVal,jVal):
@@ -224,7 +250,6 @@ class EnergyAverage:
 
     ##Calculates energies and returns them in an array
     def calcEnergies(self, sequence): 
-
         defaultEnergy = self.getEnergy(self.mutateSequence2(sequence)) ##works
         m2Energy = self.getEnergy(self.mutateSequence1(sequence, self.mutation1))
         m1Energy = self.getEnergy(self.mutateSequence1(sequence, self.mutation2))
@@ -237,7 +262,20 @@ class EnergyAverage:
 
         m1Delta += deltaDeltaE
         m2Delta += deltaDeltaE
-        return [deltaDeltaE,m1Delta,m2Delta,m1m2Delta]
+        return [deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
+    
+    def calcEnergies2(self, sequence): 
+        defaultEnergy = self.getEnergy(sequence) ##works
+        m1Energy = self.getEnergy(self.mutateSequence1Consensus(sequence, self.mutation1))
+        m2Energy = self.getEnergy(self.mutateSequence1Consensus(sequence, self.mutation2))
+        m1m2Energy = self.getEnergy(self.mutateSequence2Consensus(sequence)) ##works
+
+        m1Delta = defaultEnergy - m1Energy 
+        m2Delta = defaultEnergy - m2Energy
+        m1m2Delta = defaultEnergy - m1m2Energy 
+        deltaDeltaE = m1m2Delta - (m1Delta + m2Delta)
+
+        return [deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
 
     def calcConsensus(self):
         defaultEnergy = self.getEnergy(self.consensus)
@@ -249,10 +287,41 @@ class EnergyAverage:
         m2Delta = defaultEnergy - m2Energy
         m1m2Delta = defaultEnergy - m1m2Energy 
         deltaDeltaE = m1m2Delta - (m1Delta + m2Delta)
+        headerName = self.formattedMutation1 + '-' + self.formattedMutation2
 
-        return [deltaDeltaE,m1Delta,m2Delta,m1m2Delta]
+
+        return [headerName, deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
 
 
+    def calcOne(self,seq,name):
+        self.reduceMutations()
+        seq = self.reduceSequence(seq)
+
+        
+        consensusArr = self.calcConsensus()
+        ddConsensus = consensusArr[0]
+        d1Consensus = consensusArr[1]
+        d2Consensus = consensusArr[2]
+        d12Consensus = consensusArr[3]   
+
+        print("CONSENSUS: ")
+        print("DDelta: ",ddConsensus)
+        print("Delta12: ",d12Consensus)
+        print("Delta1: ",d1Consensus)
+        print("Delta2: ",d2Consensus, "\n")
+
+        print("SEQUENCE: ", name, ", MUTATION: ",self.mutation1, self.mutation2)
+        calcArray = self.calcEnergies2(seq)
+        ddSum = calcArray[0]
+        d1Sum = calcArray[1]
+        d2Sum = calcArray[2]
+        d12Sum = calcArray[3]
+        print("DDelta: ",ddSum)
+        print("Delta12: ",d12Sum)
+        print("Delta1: ",d1Sum)
+        print("Delta2: ",d2Sum)
+
+        print('\n\n')
 
 
     def calcAverage(self):
@@ -265,6 +334,7 @@ class EnergyAverage:
         self.reduceFoundSeqs()
         self.reduceMutations()
         len = 0
+        
         for seq in self.foundSeqs:
             calcArray = self.calcEnergies(seq)
             ddSum += calcArray[0]
@@ -295,6 +365,26 @@ class EnergyAverage:
         print("Delta12: ",d12Consensus)
         print("Delta1: ",d1Consensus)
         print("Delta2: ",d2Consensus, "\n\n")
+
+    def calcOneToOutput(self,seq,name):
+        self.reduceMutations()
+        seq = self.reduceSequence(seq)
+
+        calcArray = self.calcEnergies2(seq)
+        ddSum = calcArray[0]
+        d12Sum = calcArray[1]
+        d1Sum = calcArray[2]
+        d2Sum = calcArray[3]
+        headerName = self.formattedMutation1 + '-' + self.formattedMutation2
+
+
+        returnArr = [headerName,name,ddSum,d12Sum,d1Sum,d2Sum]
+
+        return returnArr
+
+
+
+
 
         
 

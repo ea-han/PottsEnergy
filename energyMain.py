@@ -1,8 +1,8 @@
 import Energy
 
-def printAverage():
+def average():
 
-    energyOb = Energy.Energy("in.nl43.seq","J.npy","test.txt","in.reduce4.redux","swag.txt")
+    energyOb = Energy.Energy("IN_CONSENSUS","J.npy","input.txt","in.reduce4.redux","outputtest_fullseq.txt")
     ##nFile = open("in.fullseq", 'r')
     nFile = open("in.fullseq", 'r')
 
@@ -17,8 +17,13 @@ def printAverage():
         inputList.append([])
         inputList[ctr] = appendList
         ctr += 1
+    energyOb.mutateAverageOf3(inputList)
 
-    print(energyOb.mutateAverageOf3(inputList))
+
+
+def consensus():
+    energyOb = Energy.Energy("IN_CONSENSUS","J.npy","input.txt","in.reduce4.redux","outputtest_consensus.txt")
+    energyOb.mutate()
 
 
 def main():
@@ -47,4 +52,5 @@ def main():
 ##First, get inputs and calculate delta-delta e
 
 ##main()
-printAverage()
+average()
+consensus()
