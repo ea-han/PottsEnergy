@@ -90,7 +90,7 @@ def loadFromFile(fileName):
 
 
 def main():
-    inputArray = loadFromFile("src/testinput2")
+    inputArray = loadFromFile("src/testinput")
     object1 = create("src/in.fullseq",inputArray)
     ##object1.preReduceToJson()
     object1.loadJson()

@@ -329,7 +329,7 @@ class EnergyAverage2:
         index = 0
         for seqArr in valueStack:
             actualDeltam1m2 = seqArr[3]
-            distFromMaxDelta1 = actualDeltam1m2 - max(seqArr[4],seqArr[5])
+            distFromMaxDelta1 = abs(actualDeltam1m2 - max(seqArr[4],seqArr[5]))
 
             ##check interaction
             interaction = self.getInteraction(seqArr[4], seqArr[5], actualDeltam1m2)
@@ -360,10 +360,7 @@ class EnergyAverage2:
             return self.INTERACTION1
         else:
             return self.INTERACTION2
-    
-    #sort function for compareToConsensus
-    def sortFunc1(e):
-        return e[2]
+   
 
 
     ##compares value stack interactions with consensus. sorts into one big list by interaction, delta difference.
@@ -386,6 +383,14 @@ class EnergyAverage2:
             compensate = seqData[1]
             antag = seqData[2]
             
+            rescue = sorted(rescue,key=lambda x: x[3])
+            compensate = sorted(compensate,key=lambda x: x[3])
+            antag = sorted(antag,key=lambda x: x[3])
+
+            print("computed for mutation ",mutName)
+            print("sorted by distance from Dm1m2 to highest-fitness single mutation")
+            print("[mutPair,index,interaction,distFromMaxDelta1,actualDeltam1m2]")
+
             with open("out/"+mutName+".rescue.json", "w") as outfile1:
                 json.dump(rescue, outfile1)
             with open("out/"+mutName+".compensate.json", "w") as outfile2:
@@ -393,11 +398,8 @@ class EnergyAverage2:
             with open("out/"+mutName+".antag.json", "w") as outfile3:
                 json.dump(antag, outfile3)
 
-
         
         
-        #sameAsConsensus.sort(key=self.sortFunc1)
-        #diffToConsensus.sort(key=self.sortFunc1)
         
         
 
