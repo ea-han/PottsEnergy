@@ -4,6 +4,12 @@ import json
 import pandas as pd
 import csv
 
+## TODO: 
+# -get mutations/sequence pair where they are flipped to consensus
+# -get unreduced mutations for csv file output
+# -(optional) write two comparison functions, one for DistA and DistB
+# -test code
+
 class EnergyAverage2:
     seqStack = []
     consensus = []
