@@ -90,12 +90,13 @@ def loadFromFile(fileName):
 
 
 def main():
-    inputArray = loadFromFile("src/testinput")
+    inputArray = loadFromFile("src/testinput2")
     object1 = create("src/in.fullseq",inputArray)
     ##object1.preReduceToJson()
     object1.loadJson()
+    object1.importValueStacks("out/valueStack.json")
     object1.reduceAllMutations()
-    object1.compareToConsensus()
+    object1.compareToConsensus(True)
 
     
 

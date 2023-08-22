@@ -1,6 +1,8 @@
 import os
 import pdb
 import json
+import pandas as pd
+import csv
 
 class EnergyAverage2:
     seqStack = []
@@ -9,6 +11,8 @@ class EnergyAverage2:
     reduxName = ""
     mutationList = []
 
+    ##[valStack, valStack, valStack,...]
+    importedStacks = []
     
     INTERACTION1 = "Rescue"
     INTERACTION2 = "Compensatory"
@@ -35,13 +39,18 @@ class EnergyAverage2:
         newString = newString + str(mutation[0]+1)
         newString = newString + altMutations
         return newString
+    
+    def mutPairToString(self,mutationPair):
+        string1 = self.arrToString(mutationPair[0])
+        string2 = self.arrToString(mutationPair[1])
+        return string1 + "-" + string2
 
     ##  reduces sequence stack to json file
     def preReduceToJson(self):
         newFullStack = []
         for seq in self.seqStack:
             newFullStack.append(self.reduceSequence(seq))
-            with open("reduced.in.fullseq.json", "w") as outfile:
+            with open("out/reduced.in.fullseq.json", "w") as outfile:
                 json.dump(newFullStack, outfile)
 
     ##loads stack from json file
@@ -275,7 +284,6 @@ class EnergyAverage2:
     def computeValueStacks(self):
         ##reduces stack NOTE: now using imported json file
         ##self.reduceStack()
-
         ##output Format: [[mutation,computed stack values],[mutation,computed stack values]]
         computedArr = []
         outputArr = []
@@ -285,12 +293,30 @@ class EnergyAverage2:
             computedArr = self.computeSeqsForMutation(mutPair)
             ##add stack to outputarr
             outputArr.append([mutPair,computedArr])
-            ##breakpoint() ##computed 1 mutpair stack
-        #breakpoint()
 
-        with open("out/valueStack.json", "w") as outfile1:
-            json.dump(outputArr, outfile1)        
+            ##write to json
+            ##os.mkdir("out/"+self.mutPairToString(mutPair))
+
+            with open("out/"+self.mutPairToString(mutPair)+"/valueStack.json", "w") as outfile1:
+                json.dump(outputArr, outfile1)
+
+        print("computed Value Stacks")
         return outputArr
+    
+
+    
+    def getHDNum(self,seq):
+        seqMut = ''
+        consMut = ''
+        mutList = []
+        for i in range(0,len(self.consensus)):
+            seqMut = seq[i] 
+            consMut = self.consensus[i]
+            if seqMut != consMut:
+                addString = consMut+str(i)+seqMut
+                mutList.append(addString)
+
+        return mutList
 
     ##works on consensus?
     def checkIfEligible(self, seq, mutPair):
@@ -311,6 +337,7 @@ class EnergyAverage2:
     ##takes in SINGLE MUTATION valuestack,compares each sequence DDE with consensus and classifies.
     ##Sorts and returns all values in valuestack
     ##returns []
+    ##REWRITE
     def getInteractionsAndDifference(self,mutationData):
         mutPair = mutationData[0]
         valueStack = mutationData[1]
@@ -326,30 +353,58 @@ class EnergyAverage2:
         consensusInteraction = self.getInteraction(consensusData[4],consensusData[5],consensusData[3])
         print(consensusData, consensusInteraction)
 
+        ##mutationpair, seq index, delta delta, d12, d1, d2
+
         index = 0
         for seqArr in valueStack:
+            seq = self.seqStack[seqArr[1]]
             actualDeltam1m2 = seqArr[3]
-            distFromMaxDelta1 = abs(actualDeltam1m2 - max(seqArr[4],seqArr[5]))
+            Dm1 = seqArr[4]
+            Dm2 = seqArr[5]
+            DDe = seqArr[2]
+            hd = self.getHDNum(seq)
+            seqMutList =  len(hd)
+
+            comparisonData = self.getComparisonDelta(Dm1,Dm2,actualDeltam1m2)
+
+            distFromCompValue = comparisonData[0]
+            isRescue = comparisonData[1]
 
             ##check interaction
-            interaction = self.getInteraction(seqArr[4], seqArr[5], actualDeltam1m2)
-            seqData = [mutPair,index,interaction,distFromMaxDelta1,actualDeltam1m2]
+            ##seqData = [mutPair,index,interaction,distFromMaxDelta1,actualDeltam1m2]
+            seqData = [Dm1,Dm2,actualDeltam1m2,DDe,hd,seqMutList,distFromCompValue]
+
+
+            ##new comparison func
             index+=1
-            if interaction == self.INTERACTION1:
+            if isRescue:
                 rescue.append(seqData)
-            elif interaction == self.INTERACTION2:
+            elif distFromCompValue >= 0:
                 compensate.append(seqData)
             else:
                 antag.append(seqData)
         
         return [rescue,compensate,antag]
 
+
+    ##gets comparison data. if rescue, gets max distance from top mutation. Else, gets distance from bottom mutation.
+    def getComparisonDelta(self,Dm1,Dm2,Dm1m2):
+        compVal1 = max(Dm1, Dm2)
+        compVal2 = min(Dm1, Dm2)
+        isRescue = False
+        if Dm1m2 > compVal1:
+            delta = Dm1m2 - compVal1
+            isRescue = True
+        else:
+            delta = Dm1m2 - compVal2
+        return [delta,isRescue]
     
-    def importValueStacks(self,valueStack):
-        with open("src/valueStack.json") as oFile:
+    def importValueStacks(self,filename):
+        with open(filename) as oFile:
             returnArr = json.load(oFile)
-        return returnArr
-        
+
+        self.importedStacks.append(returnArr)        
+
 
     #returns interaction
     def getInteraction(self,Dm1,Dm2, actual):
@@ -361,21 +416,21 @@ class EnergyAverage2:
         else:
             return self.INTERACTION2
    
+        
 
 
     ##compares value stack interactions with consensus. sorts into one big list by interaction, delta difference.
     ##combine all relevant data into one entry. 
     ## label,index,interaction,consensusInteraction,deltaDifference
     ##returns 2 arrays:[same as consensus, diff to consensus]
-    def compareToConsensus(self):
+    def compareToConsensus(self,loadValueStacks):
         ##gets values: [[mutation,computed stack values],[mutation,computed stack values],...]
-        sequenceCalculations = self.computeValueStacks()
-
-        #breakpoint() ##computed value stacks
-
+        sequenceCalculations = []
+        for valueStack in self.importedStacks:
+            sequenceCalculations += valueStack
+        
             ##sequenceCalulations: [[mutation,computed stack values],[mutation,computed stack values]]
         for mutationData in sequenceCalculations:
-            appendArr = self.getInteractionsAndDifference(mutationData)
             mutName = self.arrToString(mutationData[0][0]) + "-" + self.arrToString(mutationData[0][1])
             print(mutName)
             seqData = self.getInteractionsAndDifference(mutationData)
@@ -383,14 +438,27 @@ class EnergyAverage2:
             compensate = seqData[1]
             antag = seqData[2]
             
-            rescue = sorted(rescue,key=lambda x: x[3])
-            compensate = sorted(compensate,key=lambda x: x[3])
-            antag = sorted(antag,key=lambda x: x[3])
+
+            #sorts
+            rescue = sorted(rescue,key=lambda x: x[6],reverse=True)
+            compensate = sorted(compensate,key=lambda x: x[6],reverse=True)
+            antag = sorted(antag,key=lambda x: x[6],reverse=True)
 
             print("computed for mutation ",mutName)
             print("sorted by distance from Dm1m2 to highest-fitness single mutation")
-            print("[mutPair,index,interaction,distFromMaxDelta1,actualDeltam1m2]")
+            ##             seqData = [Dm1,Dm2,actualDeltam1m2,DDe,hd,seqMutList,distFromCompValue]
 
+
+            # [mutationArray,name,deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
+            consensusRow = self.calcEnergySequence(self.consensus,"consensus", mutationData[0])
+
+            lastRow = [consensusRow[4],consensusRow[5],consensusRow[3],consensusRow[2],"None",0,0]
+
+            rescue.insert(0,lastRow)
+            compensate.insert(0,lastRow)
+            antag.insert(0,lastRow)
+
+            #writes files
             with open("out/"+mutName+".rescue.json", "w") as outfile1:
                 json.dump(rescue, outfile1)
             with open("out/"+mutName+".compensate.json", "w") as outfile2:
@@ -398,12 +466,26 @@ class EnergyAverage2:
             with open("out/"+mutName+".antag.json", "w") as outfile3:
                 json.dump(antag, outfile3)
 
+
+            self.writeToCSV(rescue,mutName+"rescue")
+            self.writeToCSV(compensate,mutName+"compensate")
+            self.writeToCSV(antag,mutName+"antag")
+
+    def writeToCSV(self,data,name):
+        fields = ["Dm1","Dm2","Dm1m2","DDe","list of mutations","HD","distance from max/min D single mutation"]
+        with open("out/"+name+".csv", "w") as outfile1:                
+            write = csv.writer(outfile1)            
+            write.writerow(fields)
+            write.writerows(data)
+
+    def createValueStacks(self):
+        with open("out/newValueStack.json","w") as outfile:
+            json.dump(self.computeValueStacks(),outfile)
         
         
         
         
 
-##TODO: add mutation screen for fullseq, sort based on delta difference, combine relevant data, finish compare to consensus, test
             
 
 

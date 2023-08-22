@@ -51,14 +51,14 @@ def create(index1, letter1, letterarr1, index2, letter2, letterarr2, seqfile):
         appendList = list(strHolder)
         totalSeq.append(appendList)
 
-    cFile = open("IN_CONSENSUS", 'r')
+    cFile = open("src\IN_CONSENSUS", 'r')
     consensus = cFile.readline().strip()
     
     mutation1 = [index1,letter1,letterarr1]
     mutation2 = [index2,letter2,letterarr2]
 
-    jFileArray = np.load("J.npy")
-    reduxName = "in.reduce4.redux"
+    jFileArray = np.load("src/J.npy")
+    reduxName = "src\in.reduce4.redux"
 
     energy1 = EnergyAverage.EnergyAverage(totalSeq, consensus, mutation1, mutation2, jFileArray, reduxName)
     return energy1
@@ -93,7 +93,7 @@ def loadFromFile(fileName):
             insertArr[3] = int(insertArr[3])
 
             inputArr.append(insertArr)
-
+            print(insertArr)
             insertArr = []
             line1 = None
             line2 = None 
@@ -104,7 +104,7 @@ def loadFromFile(fileName):
         elif line2 == None:
             line2 = line
         
-    
+    print(inputArr)
     return inputArr
 
 
@@ -135,15 +135,7 @@ def mainAll():
     inputStringNL43 = list("FLDGIDKAQEEHEKYHSNWRAMASDFNLPPVVAKEIVASCDKCQLKGEAMHGQVDCSPGIWQLDCTHLEGKVILVAVHVASGYIEAEVIPAETGQETAYFLLKLAGRWPVKTVHTDNGSNFTSTTVKAACWWAGIKQEFGIPYNPQSQGVIESMNKELKKIIGQVRDQAEHLKTAVQMAVFIHNFKRKGGIGGYSAGERIVDIIATDIQTKELQKQITKIQNFRVYYRDSRDPVWKGPAKLLWKGEGAVVIQDNSDIKVVPRR")
     
 
-    inputArray = loadFromFile("testFileInput")
-    inputArray2 =[[140,'G',['S'],148,'Q',['H']],
-                 [143,'Y',['C'],230,'S',['E','R']],
-                 [140,'G',['S'],148,'Q',['R']],
-                 [138,'E',['K','T'],148,'Q',['N','K']],
-                 [97,'T',['A'],143,'Y',['R']],
-                 ]
-    for subarr in inputArray2:
-        inputArray.append(subarr)
+    inputArray = loadFromFile("src/testinput")
 
 
 
