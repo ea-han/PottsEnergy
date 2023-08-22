@@ -38,8 +38,15 @@ class EnergyAverage2:
         self.consensus = self.reduceSequence(consensus)
         self.mutationList = mutationList
 
+        mutList = []
+        for mut in mutationList:
+            mutList.append(self.mutPairToString(mut))
+
+        with open("src/mutationNames.json","w") as ifile:
+            json.dump(mutList,ifile)
+
     def arrToString(self,mutation):
-        altMutations = '/'.join(mutation[2])
+        altMutations = ','.join(mutation[2])
         newString = ''
         newString = newString + str(mutation[1])
         newString = newString + str(mutation[0]+1)
@@ -56,12 +63,12 @@ class EnergyAverage2:
         newFullStack = []
         for seq in self.seqStack:
             newFullStack.append(self.reduceSequence(seq))
-            with open("out/reduced.in.fullseq.json", "w") as outfile:
+            with open("src/reduced.in.fullseq.json", "w") as outfile:
                 json.dump(newFullStack, outfile)
 
     ##loads stack from json file
     def loadJson(self):
-        with open("out/reduced.in.fullseq.json") as inputFile:
+        with open("src/reduced.in.fullseq.json") as inputFile:
             self.seqStack = json.load(inputFile)
 
     def reduceAllMutations(self):
@@ -303,7 +310,7 @@ class EnergyAverage2:
             ##write to json
             ##os.mkdir("out/"+self.mutPairToString(mutPair))
 
-            with open("out/"+self.mutPairToString(mutPair)+"/valueStack.json", "w") as outfile1:
+            with open("src/"+self.mutPairToString(mutPair)+"/valueStack.json", "w") as outfile1:
                 json.dump(outputArr, outfile1)
 
         print("computed Value Stacks")
@@ -423,6 +430,11 @@ class EnergyAverage2:
             return self.INTERACTION2
    
         
+    def strangeLoad(self):
+         with open("src/mutationNames.json") as ifile:
+            return json.load(ifile)
+
+
 
 
     ##compares value stack interactions with consensus. sorts into one big list by interaction, delta difference.
@@ -436,9 +448,17 @@ class EnergyAverage2:
             sequenceCalculations += valueStack
         
             ##sequenceCalulations: [[mutation,computed stack values],[mutation,computed stack values]]
+
+        origMutList = self.strangeLoad()
+        print("Original mutations || reduced mutations: ")
+        for i in range(0,len(origMutList)):
+            print(origMutList[i]," || ",self.mutPairToString(sequenceCalculations[i][0]))
+
+
+        mutationListCtr = 0
         for mutationData in sequenceCalculations:
-            mutName = self.arrToString(mutationData[0][0]) + "-" + self.arrToString(mutationData[0][1])
-            print(mutName)
+            mutName = origMutList[mutationListCtr]
+            print("mutname = ", mutName)
             seqData = self.getInteractionsAndDifference(mutationData)
             rescue = seqData[0]
             compensate = seqData[1]
@@ -464,28 +484,35 @@ class EnergyAverage2:
             compensate.insert(0,lastRow)
             antag.insert(0,lastRow)
 
+            if (not os.path.exists("out/"+mutName)):
+                os.mkdir("out/"+mutName)
+
             #writes files
-            with open("out/"+mutName+".rescue.json", "w") as outfile1:
+            with open("out/"+mutName+"/rescue.json", "w") as outfile1:
                 json.dump(rescue, outfile1)
-            with open("out/"+mutName+".compensate.json", "w") as outfile2:
+            with open("out/"+mutName+"/compensate.json", "w") as outfile2:
                 json.dump(compensate, outfile2)
-            with open("out/"+mutName+".antag.json", "w") as outfile3:
+            with open("out/"+mutName+"/antag.json", "w") as outfile3:
                 json.dump(antag, outfile3)
 
 
-            self.writeToCSV(rescue,mutName+"rescue")
-            self.writeToCSV(compensate,mutName+"compensate")
-            self.writeToCSV(antag,mutName+"antag")
+            self.writeToCSV(rescue,"out/"+mutName+"/rescue")
+            self.writeToCSV(compensate,"out/"+mutName+"/compensate")
+            self.writeToCSV(antag,"out/"+mutName+"/antag")
+
+            ##updates index of original mutations
+            mutationListCtr +=1
+
 
     def writeToCSV(self,data,name):
         fields = ["Dm1","Dm2","Dm1m2","DDe","list of mutations","HD","distance from max/min D single mutation"]
-        with open("out/"+name+".csv", "w") as outfile1:                
+        with open(name+".csv", "w") as outfile1:                
             write = csv.writer(outfile1)            
             write.writerow(fields)
             write.writerows(data)
 
     def createValueStacks(self):
-        with open("out/newValueStack.json","w") as outfile:
+        with open("src/newValueStack.json","w") as outfile:
             json.dump(self.computeValueStacks(),outfile)
         
         
