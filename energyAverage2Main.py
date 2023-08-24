@@ -3,7 +3,7 @@ import io as io
 import sys
 import EnergyAverage2
 import pandas as pd
-import pdb
+import json
 
 sheetArray = []
 plotArrayMut = []
@@ -49,7 +49,7 @@ def loadFromFile(fileName):
     insertArr2 = []
 
 
-    file = open(fileName)
+    file = open(fileName,"r")
     lines = file.readlines()
     line1 = None
     line2 = None
@@ -88,8 +88,8 @@ def loadFromFile(fileName):
     return inputArr
 
 
-
 def main():
+    
     inputArray = loadFromFile("src/testinput")
     object1 = create("src/in.fullseq",inputArray)
     ##object1.preReduceToJson()

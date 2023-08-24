@@ -5,8 +5,8 @@ import pandas as pd
 import csv
 
 ## TODO: 
-# -get mutations/sequence pair where they are flipped to consensus
-# -get unreduced mutations for csv file output
+# -get mutations/sequence pair where they are flipped to consensus DONE
+# -get unreduced mutations for csv file output DONE
 # -(optional) write two comparison functions, one for DistA and DistB
 # -test code
 
@@ -315,7 +315,6 @@ class EnergyAverage2:
 
         print("computed Value Stacks")
         return outputArr
-    
 
     
     def getHDNum(self,seq):
@@ -397,7 +396,9 @@ class EnergyAverage2:
             else:
                 antag.append(seqData)
         
-        return [rescue,compensate,antag]
+        return [rescue,compensate,antag,consensusData,consensusInteraction]
+
+        
 
 
     ##gets comparison data. if rescue, gets max distance from top mutation. Else, gets distance from bottom mutation.
@@ -434,7 +435,21 @@ class EnergyAverage2:
          with open("src/mutationNames.json") as ifile:
             return json.load(ifile)
 
+    def makeFlippedList(self,dataStack, consData):
+        flippedList = []
+        ##checks if consensus m1 is greater than or equal to consensus m2
+        consensusm1Gm2 = consData[0] >= consData[1]
+ 
+        for seqData in dataStack:
+            ##gets isPositve of m1-m2 for comparison
+            sequencem1Gm2 = seqData[0] >= seqData[1]
 
+            ##if the m1 IsGreaterThan m2 boolean is different then the roles of the mutations m1 m2 must be swapped
+            ## append to flippedlist
+            if consensusm1Gm2 != sequencem1Gm2:
+                flippedList.append(seqData)
+
+        return flippedList
 
 
     ##compares value stack interactions with consensus. sorts into one big list by interaction, delta difference.
@@ -476,29 +491,38 @@ class EnergyAverage2:
 
 
             # [mutationArray,name,deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
-            consensusRow = self.calcEnergySequence(self.consensus,"consensus", mutationData[0])
-
+            consensusRow = seqData[3]
+            consensusInteraction = seqData[4]
             lastRow = [consensusRow[4],consensusRow[5],consensusRow[3],consensusRow[2],"None",0,0]
+
+
+            if (consensusInteraction == self.INTERACTION1):
+                flippedList = self.makeFlippedList(rescue,lastRow)
+            elif(consensusInteraction == self.INTERACTION2):
+                flippedList = self.makeFlippedList(compensate,lastRow)
+            else:
+                flippedList = self.makeFlippedList(antag,lastRow)
+
+
 
             rescue.insert(0,lastRow)
             compensate.insert(0,lastRow)
             antag.insert(0,lastRow)
+            flippedList.insert(0,lastRow)
 
             if (not os.path.exists("out/"+mutName)):
                 os.mkdir("out/"+mutName)
 
             #writes files
-            with open("out/"+mutName+"/rescue.json", "w") as outfile1:
-                json.dump(rescue, outfile1)
-            with open("out/"+mutName+"/compensate.json", "w") as outfile2:
-                json.dump(compensate, outfile2)
-            with open("out/"+mutName+"/antag.json", "w") as outfile3:
-                json.dump(antag, outfile3)
-
+            self.writeToJson(rescue,"out/"+mutName+"/rescue")
+            self.writeToJson(compensate,"out/"+mutName+"/compensate")            
+            self.writeToJson(antag,"out/"+mutName+"/antag")
+            self.writeToJson(flippedList,"out/"+mutName+"/flipped")
 
             self.writeToCSV(rescue,"out/"+mutName+"/rescue")
             self.writeToCSV(compensate,"out/"+mutName+"/compensate")
             self.writeToCSV(antag,"out/"+mutName+"/antag")
+            self.writeToCSV(flippedList,"out/"+mutName+"/flipped")
 
             ##updates index of original mutations
             mutationListCtr +=1
@@ -510,6 +534,10 @@ class EnergyAverage2:
             write = csv.writer(outfile1)            
             write.writerow(fields)
             write.writerows(data)
+
+    def writeToJson(self,data,name):
+        with open(name+".json", "w") as outfile:
+                json.dump(data, outfile)
 
     def createValueStacks(self):
         with open("src/newValueStack.json","w") as outfile:
