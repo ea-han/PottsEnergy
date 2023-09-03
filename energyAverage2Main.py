@@ -1,9 +1,11 @@
 import numpy as np
 import io as io
 import sys
-import EnergyAverage2
 import pandas as pd
 import json
+import ClassifySequences
+import CreateValueStacks
+import CompileSequences
 
 sheetArray = []
 plotArrayMut = []
@@ -11,7 +13,6 @@ plotArrayC = []
 plotArray1 = []
 plotArray2 = []
 plotArray3 = []
-
 
 ##seqStack, consensus, mutationList, jFileArray, reduxName
 def create(seqStackfile, mutationList):
@@ -36,8 +37,27 @@ def create(seqStackfile, mutationList):
         mutationPair[1][0] = mutationPair[1][0] - 1
 
     ##init energy2
-    energy = EnergyAverage2.EnergyAverage2(seqStack, consensus, mutationList, jFileArray, reduxName)
+    energy = ClassifySequences.ClassifySequences(seqStack, consensus, mutationList, jFileArray, reduxName)
     return energy
+
+def makeDataStacks(seqStackFile,mutationList):
+    jFile = open(seqStackFile)
+    seqStack = []
+    lines = jFile.readlines()
+    for line in lines:
+        strHolder = line.strip()
+        appendList = list(strHolder)
+        seqStack.append(appendList)
+
+    ds = CompileSequences.CompileSequences("src/in.reduce4.redux",seqStack,mutationList)
+    ds.computeAllStackPairs()
+
+
+def makeSeqStacks():
+    jArray = np.load("src/J.npy")
+    ob = CreateValueStacks.CreateValueStacks(jArray,"src/in.reduce4.redux")
+    ob.createValueStacks()
+
 
 ##Runsc
 def loadFromFile(fileName):
@@ -87,20 +107,21 @@ def loadFromFile(fileName):
         
     return inputArr
 
-
-def main():
-    
+def foo():
     inputArray = loadFromFile("src/testinput")
     object1 = create("src/in.fullseq",inputArray)
-    ##object1.preReduceToJson()
-    object1.loadJson()
-    object1.importValueStacks("src/valueStack.json")
-    object1.reduceAllMutations()
-    object1.compareToConsensus(True)
+    print(''.join(object1.consensus))
 
+def main():
+    inputArray = loadFromFile("src/testinput")
+    ##object1 = makeDataStacks("src/in.fullseq",inputArray)
+    ##makeSeqStacks()
+    ob2 = create("src/in.fullseq",inputArray)
+    ob2.compareToConsensus()
     
-
+##foo()
 main()
+
 
 
 
