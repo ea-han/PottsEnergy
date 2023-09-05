@@ -41,6 +41,97 @@ class ClassifySequences:
         with open("src/mutationNames.json","w") as ifile:
             json.dump(mutList,ifile)
 
+
+    ## get energy for consensus methods {
+    def getCoupling(self, iVal,jVal):
+        aVali = ord(iVal) - 65
+        aValj = ord(jVal) - 65
+        if (aVali < 0 or aVali > 3):
+            print("invalid coupling")
+            return
+        if (aVali == 0 and aValj == 0):
+            return 0
+        if (aVali == 0 and aValj == 1):
+            return 1
+        if (aVali == 0 and aValj == 2):
+            return 2
+        if (aVali == 0 and aValj == 3):
+            return 3
+        if (aVali == 1 and aValj == 0):
+            return 4
+        if (aVali == 1 and aValj == 1):
+            return 5
+        if (aVali == 1 and aValj == 2):
+            return 6
+        if (aVali == 1 and aValj == 3):
+            return 7
+        if (aVali == 2 and aValj == 0):
+            return 8
+        if (aVali == 2 and aValj == 1):
+            return 9
+        if (aVali == 2 and aValj == 2):
+            return 10
+        if (aVali == 2 and aValj == 3):
+            return 11
+        if (aVali == 3 and aValj == 0):
+            return 12
+        if (aVali == 3 and aValj == 1):
+            return 13
+        if (aVali == 3 and aValj == 2):
+            return 14
+        if (aVali == 3 and aValj == 3):
+            return 15
+        return -1
+
+    ##gets energy of a sequence
+    def getEnergy(self, seq):
+        ctr = 0
+        energy = 0
+        length = len(seq)
+
+        for i in range(0,length):
+            iAcid = seq[i]
+            for j in range (i+1,length):
+                jAcid = seq[j]
+                couplingIdx = self.getCoupling(iAcid,jAcid)
+                if couplingIdx < 0:
+                    print("coupling failed")
+                    return -1
+                energy += self.jFileArray[ctr][couplingIdx]
+                ctr+=1
+        return energy
+
+    def mutateSequence1Consensus(self, seq,mutation):
+        sequence = list(seq)
+        sequence[mutation[0]] = mutation[2]
+        return sequence
+    
+    def mutateSequence2Consensus(self, seq,mutation1,mutation2):
+        sequence = list(seq)
+        sequence[mutation1[0]] = mutation1[2]
+        sequence[mutation2[0]] = mutation2[2]
+        return sequence
+    
+    ##takes reduced sequence andmutation and calcultes energies. Need to screen for valid mutation/sequences.
+    #runs? need to check avlues
+    def calcEnergySequence(self,seq,name,mutationArray):
+        
+        defaultEnergy = self.getEnergy(seq) ##works
+        m1Energy = self.getEnergy(self.mutateSequence1Consensus(seq, mutationArray[0]))
+        m2Energy = self.getEnergy(self.mutateSequence1Consensus(seq, mutationArray[1]))
+        m1m2Energy = self.getEnergy(self.mutateSequence2Consensus(seq,mutationArray[0],mutationArray[1])) ##works
+
+        m1Delta = defaultEnergy - m1Energy 
+        m2Delta = defaultEnergy - m2Energy
+        m1m2Delta = defaultEnergy - m1m2Energy 
+        deltaDeltaE = m1m2Delta - (m1Delta + m2Delta)
+
+        return [mutationArray,name,deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
+
+    #}
+
+
+
     def arrToString(self,mutation):
         altMutations = ','.join(mutation[2])
         newString = ''
@@ -207,6 +298,8 @@ class ClassifySequences:
 
         mutationListCtr = 0
         for mutationData in sequenceCalculations:
+
+            print(mutationData)
             mutName = self.mutPairToString(mutationData[0])
             print("mutname = ", mutName)
 

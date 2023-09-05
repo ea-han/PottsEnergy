@@ -142,6 +142,7 @@ class CreateValueStacks:
         m1Delta += deltaDeltaE
         m2Delta += deltaDeltaE
 
+        ##name is index
         return [mutationArray,name,deltaDeltaE,m1m2Delta,m1Delta,m2Delta]
     
 

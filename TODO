@@ -1,0 +1,5 @@
+1. make name in createValueStacks the index, not the name
+2. fix other bugs
+3. test code (HOW?)
+    3.1. make wrapper for getED2 and test calculations.
+    3.2. compare to my calculations
